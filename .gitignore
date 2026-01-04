@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Environment variables
+.env
+.env.local
+
+# Build output
+/dist
+/build
