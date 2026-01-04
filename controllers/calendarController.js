@@ -6,6 +6,7 @@ const Meeting = require('../models/Meeting');
 // GET /api/calendar?year=2025&userId=... (Optional: &month=...)
 const getCalendarData = async (req, res) => {
   try {
+    console.log("I have been called here");
     const { month, year, userId } = req.query; 
 
     if (!year) {
