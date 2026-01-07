@@ -1,37 +1,44 @@
 const Meeting = require('../models/Meeting');
 const User = require('../models/User');
+const sendNotification = require('../utils/sendNotification');
 
 // POST /api/meeting/create
+// controllers/meetingController.js
+
 const createMeeting = async (req, res) => {
   try {
-    const { hostId, title, link, date, time, attendeeIds } = req.body;
+    const { title, link, date, startTime, endTime, hostId, attendeeIds } = req.body;
 
-    // 1. Create Meeting
-    const newMeeting = new Meeting({
-      host: hostId,
+    // Validate that End Time is after Start Time (Optional but recommended)
+    // You can add logic here to parse and compare strings if needed
+
+    const newMeeting = await Meeting.create({
       title,
       link,
       date,
-      time,
-      attendees: attendeeIds // Array of User IDs
+      startTime, // "10:00 AM"
+      endTime,   // "11:00 AM"
+      host: hostId,
+      attendees: attendeeIds
     });
-    await newMeeting.save();
 
-    // 2. Update Status of Attendees (Only if meeting is Today)
-    // Logic: If I schedule a meeting for next year, I shouldn't be "In Meeting" today.
-    // For this requirement, we'll assume the admin wants to mark them now or check date.
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (date === today) {
-        await User.updateMany(
-            { _id: { $in: attendeeIds } },
-            { $set: { currentStatus: 'In Meeting' } }
-        );
+    if (attendeeIds && attendeeIds.length > 0) {
+      attendeeIds.forEach(attendeeId => {
+        // Send to everyone EXCEPT the host
+        if (attendeeId.toString() !== hostId.toString()) {
+          sendNotification(
+            attendeeId, // Target User ID
+            "New Meeting Invitation", // Title
+            `You are invited to '${title}' on ${date} at ${startTime}`, // Body
+            { type: 'Meeting', meetingId: newMeeting._id.toString() } // Custom Data for Navigation
+          );
+        }
+      });
     }
 
     res.status(201).json(newMeeting);
-  } catch (err) {
-    res.status(500).json({ message: "Server Error", error: err.message });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
@@ -54,7 +61,8 @@ const getMeetings = async (req, res) => {
         _id: meeting._id,
         title: meeting.title,
         date: meeting.date,
-        time: meeting.time,
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
         color: meeting.color,
         type: 'Meeting',
         // HIDE LINK IF UNAUTHORIZED

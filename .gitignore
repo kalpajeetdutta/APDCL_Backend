@@ -11,3 +11,5 @@ node_modules/
 # Build output
 /dist
 /build
+
+config/serviceAccountKey.json

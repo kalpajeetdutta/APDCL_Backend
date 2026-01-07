@@ -1,4 +1,5 @@
 const Event = require('../models/Event');
+const sendBroadcast = require('../utils/sendBroadcast');
 
 // POST /api/event/create
 const createEvent = async (req, res) => {
@@ -20,6 +21,14 @@ const createEvent = async (req, res) => {
     });
 
     const savedEvent = await newEvent.save();
+
+    // We don't await this so it doesn't slow down the response
+    sendBroadcast(
+      `New ${type || 'Event'} Added`, // Title: "New Holiday Added"
+      `${title} is scheduled for ${startDate}`, // Body
+      { type: 'Event', eventId: savedEvent._id.toString() } // Data
+    );
+
     res.status(201).json(savedEvent);
   } catch (err) {
     res.status(500).json({ message: "Server Error", error: err.message });

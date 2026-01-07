@@ -61,4 +61,28 @@ const getLatestLeave = async (req, res) => {
   }
 };
 
-module.exports = { applyLeave, getLatestLeave };
+const deleteLeave = async (req, res) => {
+  try {
+    const leaveId = req.params.id;
+    const leave = await Leave.findById(leaveId);
+
+    if (!leave) {
+      return res.status(404).json({ message: 'Leave not found' });
+    }
+
+    // 1. Remove reference from User's 'leaves' array
+    await User.findByIdAndUpdate(leave.user, {
+      $pull: { leaves: leaveId }
+    });
+
+    // 2. Delete the Leave Document
+    await leave.deleteOne();
+
+    res.json({ message: 'Leave cancelled successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+module.exports = { applyLeave, getLatestLeave, deleteLeave };

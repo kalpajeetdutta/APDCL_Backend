@@ -11,7 +11,8 @@ const HolidaySchema = new mongoose.Schema({
     default: 'Full Holiday' 
   },
   color: { type: String, default: '#D32F2F' }, 
-  description: { type: String }
+  description: { type: String },
+  isAllDay: { type: Boolean, default: true }
 });
 
 module.exports = mongoose.model('Holiday', HolidaySchema);
