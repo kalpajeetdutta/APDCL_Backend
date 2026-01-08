@@ -13,6 +13,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const authRoutes = require('./routes/authRoutes');
 const holidayRoutes = require('./routes/holidayRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/event', eventRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/holiday', holidayRoutes);
 app.use('/api/notification', notificationRoutes);
+app.use('/api/user', userRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

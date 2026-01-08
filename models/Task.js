@@ -8,7 +8,7 @@ const TaskSchema = new mongoose.Schema({
   date: { 
     type: String, 
     required: true 
-  }, // YYYY-MM-DD (Acts as Deadline)
+  }, // YYYY-MM-DD (Deadline)
   
   time: { 
     type: String 
@@ -28,7 +28,6 @@ const TaskSchema = new mongoose.Schema({
     default: '#2196F3' 
   },
 
-  // --- NEW FIELDS FOR OFFICIAL TASKS ---
   type: {
     type: String,
     enum: ['Personal Task', 'Official Task'], 
@@ -39,13 +38,13 @@ const TaskSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
     default: null 
-  }, // The person who CREATED the task
+  }, 
   
-  assignedTo: { 
+  // ✅ CHANGED: Now accepts multiple users
+  assignedTo: [{ 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',
-    default: null 
-  } // The person assigned to DO the task
-}, { timestamps: true }); // Each task gets its own createdAt/updatedAt
+    ref: 'User' 
+  }] 
+}, { timestamps: true });
 
 module.exports = TaskSchema;
