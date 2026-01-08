@@ -17,8 +17,8 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Meeting', 'Task', 'Holiday', 'Event', 'General'],
-    default: 'General'
+    enum: ['Meeting', 'Task', 'Holiday', 'Event', 'Party', 'Camp', 'Tour', 'Notice', 'Message'],
+    default: 'Event'
   },
   relatedId: {
     type: mongoose.Schema.Types.ObjectId, 
