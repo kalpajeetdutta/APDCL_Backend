@@ -35,9 +35,9 @@ const createEvent = async (req, res) => {
         attendeeIds.forEach(targetId => {
             sendNotification(
                 targetId,
-                "New Event Invitation",
-                `You are invited to '${title}' (${type})`,
-                { type: 'Event', eventId: savedEvent._id.toString() }
+                `New ${type} Invitation`,
+                `You are invited to '${title}'`,
+                { type: `${type}`, eventId: savedEvent._id.toString() }
             );
         });
     } else {
@@ -45,7 +45,7 @@ const createEvent = async (req, res) => {
         sendBroadcast(
             `New ${type || 'Event'} Added`, 
             `${title} is scheduled for ${startDate}`, 
-            { type: 'Event', eventId: savedEvent._id.toString() }
+            { type: `${type}`, eventId: savedEvent._id.toString() }
         );
     }
 

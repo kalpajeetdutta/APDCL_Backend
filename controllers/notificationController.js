@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const sendBroadcast = require('../utils/sendBroadcast');
 
 // GET /api/notification/:userId
 const getUserNotifications = async (req, res) => {
@@ -33,4 +34,31 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
-module.exports = { getUserNotifications, markAsRead, markAllAsRead };
+// POST /api/notification/broadcast
+const broadcastNotification = async (req, res) => {
+  try {
+    const { title, message, type, date, time } = req.body;
+
+    // 1. Append Date/Time to the message body for clarity
+    let finalMessage = message;
+    if (date || time) {
+        finalMessage += `\n\n📅 ${date || ''} ${time ? '• ' + time : ''}`;
+    }
+
+    // 2. Call your existing utility
+    // It already fetches all users and inserts notifications/sends FCM
+    await sendBroadcast(
+        title, 
+        finalMessage, 
+        { type: type } // Pass 'Notice' or 'Message' as type
+    );
+
+    res.status(200).json({ message: "Broadcast sent successfully" });
+
+  } catch (error) {
+    console.error("Broadcast Error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+module.exports = { getUserNotifications, markAsRead, markAllAsRead, broadcastNotification };
