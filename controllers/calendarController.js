@@ -28,29 +28,23 @@ const getCalendarData = async (req, res) => {
     }
 
     // --- 2. FETCH DATA ---
-    
-    // A. Holidays (Always Fetch)
     const holidaysPromise = Holiday.find({ date: { $gte: startDateStr, $lte: endDateStr } });
 
-    // B. Events (Filtered by Scope & Date)
-    // ✅ UPDATED: Filter by Global vs Private (User must be attendee)
     const eventsPromise = isGuest ? Promise.resolve([]) : Event.find({ 
         startDate: { $gte: startDateStr, $lte: endDateStr },
         $or: [
             { scope: 'Global' },
-            { scope: { $exists: false } }, // Handle legacy data
+            { scope: { $exists: false } }, 
             { scope: 'Private', attendees: userId }
         ]
     })
-    .populate({ path: 'createdBy', select: 'name email' }) // Populate Host
-    .populate({ path: 'attendees', select: 'name email' }); // Populate Attendees
+    .populate({ path: 'createdBy', select: 'name email' }) 
+    .populate({ path: 'attendees', select: 'name email' }); 
 
-    // C. Meetings (Filtered by Date)
     const meetingsPromise = isGuest ? Promise.resolve([]) : Meeting.find({ date: { $gte: startDateStr, $lte: endDateStr } })
         .populate({ path: 'host', select: 'name email' })
         .populate({ path: 'attendees', select: 'name email' });
 
-    // D. Tasks (User Specific)
     const tasksPromise = (!isGuest && userId) ? 
         User.findById(userId)
             .select('tasks')
@@ -62,7 +56,6 @@ const getCalendarData = async (req, res) => {
             }) 
         : Promise.resolve([]);
 
-    // E. Birthdays & Anniversaries
     const birthdaysPromise = isGuest ? Promise.resolve([]) : User.find().select('name dobDay dobMonth');
     const anniversariesPromise = isGuest ? Promise.resolve([]) : User.find().select('name joiningDay joiningMonth');
 
@@ -83,24 +76,22 @@ const getCalendarData = async (req, res) => {
         _id: h._id, 
         type: h.type || 'Full Holiday', 
         title: h.name, 
+        date: h.date, // ✅ ADDED THIS
         color: h.color || '#D32F2F', 
         description: h.description, 
         isAllDay: h.isAllDay,
-        startAllDay: true, // Holidays are usually all day
+        startAllDay: true,
         endAllDay: true
     }));
 
-    // 2. Events (Flatten Multi-day events)
+    // 2. Events
     events.forEach(e => {
        let current = new Date(e.startDate); 
        const end = new Date(e.endDate || e.startDate);
-       
-       // Populate Host Object correctly
        const hostData = e.createdBy || null;
 
        while (current <= end) {
            const dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
-           
            if (dateKey >= startDateStr && dateKey <= endDateStr) {
                addToResponse(dateKey, {
                    _id: e._id, 
@@ -108,16 +99,16 @@ const getCalendarData = async (req, res) => {
                    title: e.title, 
                    color: e.color, 
                    description: e.description, 
-                   // ✅ NEW TIME FIELDS
                    startTime: e.startTime, 
                    endTime: e.endTime, 
-                   startAllDay: e.startAllDay, // Boolean
-                   endAllDay: e.endAllDay,     // Boolean
-                   // Dates
+                   startAllDay: e.startAllDay, 
+                   endAllDay: e.endAllDay,     
                    startDate: e.startDate, 
                    endDate: e.endDate, 
+                   // ✅ 'date' isn't strictly needed for logic here as it has startDate, 
+                   // but adding it ensures the MonthView fallback works perfectly.
+                   date: dateKey, 
                    isMultiDay: e.startDate !== e.endDate,
-                   // Meta
                    host: hostData,
                    attendees: e.attendees,
                    scope: e.scope
@@ -127,7 +118,7 @@ const getCalendarData = async (req, res) => {
        }
     });
 
-   // 3. Meetings (Security Check Logic)
+   // 3. Meetings
     meetings.forEach(m => {
         const hostId = m.host?._id ? m.host._id.toString() : m.host?.toString();
         const isHost = hostId === userId;
@@ -135,14 +126,13 @@ const getCalendarData = async (req, res) => {
             const attId = att._id ? att._id.toString() : att.toString();
             return attId === userId;
         });
-
         const hasAccess = isHost || isAttendee;
         
         addToResponse(m.date, {
             _id: m._id, 
             type: 'Meeting', 
             title: hasAccess ? m.title : 'Private Meeting', 
-            date: m.date,
+            date: m.date, // ✅ ALREADY HAD THIS
             host: m.host,       
             attendees: m.attendees, 
             startTime: m.startTime || m.time, 
@@ -153,12 +143,13 @@ const getCalendarData = async (req, res) => {
         });
     });
 
-    // 4. Tasks
+    // 4. Tasks (The Fix is Here)
     tasks.forEach(t => {
         addToResponse(t.date, {
             _id: t._id,
             type: t.type,
             title: t.title,
+            date: t.date, // ✅ ADDED THIS (Fixes "Date N/A")
             time: t.time,
             color: t.color || '#2196F3', 
             description: t.description,
@@ -174,7 +165,14 @@ const getCalendarData = async (req, res) => {
             const monthStr = String(u.dobMonth).padStart(2, '0');
             const dayStr = String(u.dobDay).padStart(2, '0');
             const dateKey = `${year}-${monthStr}-${dayStr}`;
-            addToResponse(dateKey, { type: 'Birthday', title: `🎂 Birthday: ${u.name}`, color: '#E91E63', time: 'All Day', startAllDay: true });
+            addToResponse(dateKey, { 
+                type: 'Birthday', 
+                title: `🎂 Birthday: ${u.name}`, 
+                color: '#E91E63', 
+                time: 'All Day', 
+                startAllDay: true,
+                date: dateKey // ✅ ADDED THIS
+            });
         }
     });
 
@@ -183,7 +181,14 @@ const getCalendarData = async (req, res) => {
             const monthStr = String(u.joiningMonth).padStart(2, '0');
             const dayStr = String(u.joiningDay).padStart(2, '0');
             const dateKey = `${year}-${monthStr}-${dayStr}`;
-            addToResponse(dateKey, { type: 'Anniversary', title: `🎉 Work Anniversary: ${u.name}`, color: '#FFC107', time: 'All Day', startAllDay: true });
+            addToResponse(dateKey, { 
+                type: 'Anniversary', 
+                title: `🎉 Work Anniversary: ${u.name}`, 
+                color: '#FFC107', 
+                time: 'All Day', 
+                startAllDay: true,
+                date: dateKey // ✅ ADDED THIS
+            });
         }
     });
 
