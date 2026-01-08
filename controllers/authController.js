@@ -91,6 +91,7 @@ const loginUser = async (req, res) => {
         department: user.department,
         designation: user.designation,
         token: generateToken(user._id),
+        fcmToken: user.fcmToken
       });
 
     } else {
